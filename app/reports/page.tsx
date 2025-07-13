@@ -1,114 +1,115 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Badge } from "@/components/ui/badge"
-import { Download, Search, FileText, User, GraduationCap, TrendingUp, BarChart3 } from "lucide-react"
-import { Navigation } from "@/components/navigation"
+import { useEffect, useState } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Download, Search, FileText, User, GraduationCap, TrendingUp, BarChart3, Trash } from "lucide-react";
+import { Navigation } from "@/components/navigation";
 
 interface StudentRecord {
-  id: string
-  name: string
-  gpa: number
-  scale: string
-  totalCredits: number
-  semester: string
-  calculatedDate: string
-  status: "completed" | "pending" | "reviewed"
+  id: string;
+  name: string;
+  gpa: number;
+  scale: string;
+  totalCredits: number;
+  semester: string;
+  calculatedDate: string;
+  status: "completed" | "pending" | "reviewed";
 }
 
 export default function Reports() {
-  const [searchTerm, setSearchTerm] = useState("")
-  const [filterScale, setFilterScale] = useState("all")
-  const [filterSemester, setFilterSemester] = useState("all")
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterScale, setFilterScale] = useState("all");
+  const [filterSemester, setFilterSemester] = useState("all");
+  const [studentRecords, setStudentRecords] = useState<StudentRecord[]>([]);
 
-  const [studentRecords] = useState<StudentRecord[]>([
-    {
-      id: "1",
-      name: "John Smith",
-      gpa: 3.85,
-      scale: "4.0",
-      totalCredits: 120,
-      semester: "Fall 2024",
-      calculatedDate: "2024-01-15",
-      status: "completed",
-    },
-    {
-      id: "2",
-      name: "Sarah Johnson",
-      gpa: 4.2,
-      scale: "5.0",
-      totalCredits: 115,
-      semester: "Fall 2024",
-      calculatedDate: "2024-01-14",
-      status: "completed",
-    },
-    {
-      id: "3",
-      name: "Mike Davis",
-      gpa: 3.67,
-      scale: "4.0",
-      totalCredits: 98,
-      semester: "Spring 2024",
-      calculatedDate: "2024-01-14",
-      status: "pending",
-    },
-    {
-      id: "4",
-      name: "Emily Chen",
-      gpa: 3.92,
-      scale: "4.0",
-      totalCredits: 105,
-      semester: "Fall 2024",
-      calculatedDate: "2024-01-13",
-      status: "completed",
-    },
-    {
-      id: "5",
-      name: "David Wilson",
-      gpa: 3.45,
-      scale: "4.0",
-      totalCredits: 87,
-      semester: "Spring 2024",
-      calculatedDate: "2024-01-12",
-      status: "reviewed",
-    },
-    {
-      id: "6",
-      name: "Lisa Anderson",
-      gpa: 4.1,
-      scale: "5.0",
-      totalCredits: 110,
-      semester: "Fall 2024",
-      calculatedDate: "2024-01-11",
-      status: "completed",
-    },
-  ])
+  useEffect(() => {
+    const loadData = () => {
+      const batchUploads = parseInt(localStorage.getItem("batchUploads") || "0", 10);
+      const transcriptProcess = parseInt(localStorage.getItem("transcriptProcess") || "0", 10);
+      const transferGPA = parseInt(localStorage.getItem("transferGPA") || "0", 10);
+
+      const resultsString = localStorage.getItem("results");
+      let resultsArray = resultsString ? JSON.parse(resultsString) : [];
+
+      // Add unique IDs if missing
+      resultsArray = resultsArray.map((r: any, i: number) => {
+        if (!r.id) {
+          r.id = `rec-${Date.now()}-${i}`;
+        }
+        return r;
+      });
+
+      // Save back to localStorage with IDs assigned
+      localStorage.setItem("results", JSON.stringify(resultsArray));
+
+      // Map to StudentRecord[]
+      const mapped: StudentRecord[] = resultsArray.map((r: any) => ({
+        id: r.id,
+        name: r.Student || "Unknown",
+        gpa: r.GPA ?? 0,
+        scale: r.Scale || "N/A",
+        totalCredits: r.Credits ?? 0,
+        semester: r.Semester || "N/A",
+        calculatedDate: r.Date || new Date().toISOString().split("T")[0],
+        status: (r.Status || "completed").toLowerCase(),
+      }));
+
+      setStudentRecords(mapped);
+
+      localStorage.setItem("totalStudents", (batchUploads + transcriptProcess + transferGPA).toString());
+    };
+
+    loadData();
+  }, []);
+
 
   const filteredRecords = studentRecords.filter((record) => {
-    const matchesSearch = record.name.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesScale = filterScale === "all" || record.scale === filterScale
-    const matchesSemester = filterSemester === "all" || record.semester === filterSemester
-    return matchesSearch && matchesScale && matchesSemester
-  })
+    const matchesSearch = record.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesScale = filterScale === "all" || record.scale === filterScale;
+    const matchesSemester = filterSemester === "all" || record.semester === filterSemester;
+    return matchesSearch && matchesScale && matchesSemester;
+  });
 
-  const stats = {
-    totalStudents: studentRecords.length,
-    averageGPA:
-      Math.round((studentRecords.reduce((sum, record) => sum + record.gpa, 0) / studentRecords.length) * 100) / 100,
-    completedCalculations: studentRecords.filter((r) => r.status === "completed").length,
-    pendingReview: studentRecords.filter((r) => r.status === "pending").length,
-  }
+  const totalStudents =
+    parseInt(localStorage.getItem("batchUploads") || "0", 10) +
+    parseInt(localStorage.getItem("transcriptProcess") || "0", 10) +
+    parseInt(localStorage.getItem("transferGPA") || "0", 10);
+
+  const completedCalculations = studentRecords.filter((r) => r.status === "completed").length;
+  const pendingReview = studentRecords.filter((r) => r.status === "pending").length;
+
+  const averageGPA =
+    studentRecords.length > 0
+      ? Math.round(
+        (studentRecords.reduce((sum, record) => sum + record.gpa, 0) / studentRecords.length) * 100
+      ) / 100
+      : 0;
 
   const exportReport = (format: "csv" | "pdf" | "excel") => {
-    // Simulate export functionality
-    console.log(`Exporting ${filteredRecords.length} records as ${format.toUpperCase()}`)
-    alert(`Exporting ${filteredRecords.length} records as ${format.toUpperCase()}`)
-  }
+    console.log(`Exporting ${filteredRecords.length} records as ${format.toUpperCase()}`);
+    alert(`Exporting ${filteredRecords.length} records as ${format.toUpperCase()}`);
+  };
+
+
+  const handleDelete = (id: string) => {
+    const resultsString = localStorage.getItem("results");
+    let resultsArray = resultsString ? JSON.parse(resultsString) : [];
+
+    // Filter out deleted record by id
+    resultsArray = resultsArray.filter((r: any) => r.id !== id);
+
+    // Save updated array back to localStorage
+    localStorage.setItem("results", JSON.stringify(resultsArray));
+
+    // Update state to re-render table
+    setStudentRecords((prev) => prev.filter((record) => record.id !== id));
+  };
+
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -122,53 +123,18 @@ export default function Reports() {
 
         {/* Stats Overview */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Total Students</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.totalStudents}</p>
-                </div>
-                <User className="h-8 w-8 text-blue-600" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Average GPA</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.averageGPA}</p>
-                </div>
-                <GraduationCap className="h-8 w-8 text-green-600" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Completed</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.completedCalculations}</p>
-                </div>
-                <TrendingUp className="h-8 w-8 text-purple-600" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Pending Review</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.pendingReview}</p>
-                </div>
-                <BarChart3 className="h-8 w-8 text-orange-600" />
-              </div>
-            </CardContent>
-          </Card>
+          <StatCard title="Total Students" value={totalStudents} icon={<User className="h-8 w-8 text-blue-600" />} />
+          <StatCard title="Average GPA" value={averageGPA} icon={<GraduationCap className="h-8 w-8 text-green-600" />} />
+          <StatCard
+            title="Completed"
+            value={completedCalculations}
+            icon={<TrendingUp className="h-8 w-8 text-purple-600" />}
+          />
+          <StatCard
+            title="Pending Review"
+            value={pendingReview}
+            icon={<BarChart3 className="h-8 w-8 text-orange-600" />}
+          />
         </div>
 
         <Card>
@@ -178,20 +144,14 @@ export default function Reports() {
                 <CardTitle>Student GPA Records</CardTitle>
                 <CardDescription>Manage and export student GPA calculations</CardDescription>
               </div>
-              <div className="flex gap-2">
-                <Button onClick={() => exportReport("csv")} variant="outline" size="sm">
-                  <Download className="mr-2 h-4 w-4" />
-                  CSV
-                </Button>
-                <Button onClick={() => exportReport("excel")} variant="outline" size="sm">
-                  <Download className="mr-2 h-4 w-4" />
-                  Excel
-                </Button>
-                <Button onClick={() => exportReport("pdf")} variant="outline" size="sm">
-                  <Download className="mr-2 h-4 w-4" />
-                  PDF
-                </Button>
-              </div>
+              {/* <div className="flex gap-2">
+                {["csv", "excel", "pdf"].map((f) => (
+                  <Button key={f} onClick={() => exportReport(f as any)} variant="outline" size="sm">
+                    <Download className="mr-2 h-4 w-4" />
+                    {f.toUpperCase()}
+                  </Button>
+                ))}
+              </div> */}
             </div>
           </CardHeader>
           <CardContent>
@@ -211,91 +171,18 @@ export default function Reports() {
                 </div>
               </div>
 
-              <div>
-                <Label htmlFor="scale-filter">Grading Scale</Label>
-                <Select value={filterScale} onValueChange={setFilterScale}>
-                  <SelectTrigger className="w-[140px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Scales</SelectItem>
-                    <SelectItem value="4.0">4.0 Scale</SelectItem>
-                    <SelectItem value="5.0">5.0 Scale</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label htmlFor="semester-filter">Semester</Label>
-                <Select value={filterSemester} onValueChange={setFilterSemester}>
-                  <SelectTrigger className="w-[140px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Semesters</SelectItem>
-                    <SelectItem value="Fall 2024">Fall 2024</SelectItem>
-                    <SelectItem value="Spring 2024">Spring 2024</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              <FilterSelect label="Grading Scale" value={filterScale} onChange={setFilterScale} options={["4.0", "5.0"]} />
+              <FilterSelect
+                label="Semester"
+                value={filterSemester}
+                onChange={setFilterSemester}
+                options={["Fall 2024", "Spring 2024"]}
+              />
             </div>
 
             {/* Records Table */}
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left py-3 px-4 font-medium text-gray-900">Student</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-900">GPA</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-900">Scale</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-900">Credits</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-900">Semester</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-900">Date</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-900">Status</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-900">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredRecords.map((record) => (
-                    <tr key={record.id} className="border-b hover:bg-gray-50">
-                      <td className="py-3 px-4">
-                        <div className="flex items-center">
-                          <div className="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
-                            <User className="h-4 w-4 text-blue-600" />
-                          </div>
-                          <span className="font-medium">{record.name}</span>
-                        </div>
-                      </td>
-                      <td className="py-3 px-4">
-                        <span className="font-semibold text-lg">{record.gpa}</span>
-                      </td>
-                      <td className="py-3 px-4">{record.scale}</td>
-                      <td className="py-3 px-4">{record.totalCredits}</td>
-                      <td className="py-3 px-4">{record.semester}</td>
-                      <td className="py-3 px-4 text-gray-600">{record.calculatedDate}</td>
-                      <td className="py-3 px-4">
-                        <Badge
-                          variant={
-                            record.status === "completed"
-                              ? "default"
-                              : record.status === "pending"
-                                ? "secondary"
-                                : "outline"
-                          }
-                        >
-                          {record.status}
-                        </Badge>
-                      </td>
-                      <td className="py-3 px-4">
-                        <Button variant="ghost" size="sm">
-                          <FileText className="h-4 w-4" />
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <Table records={filteredRecords} onDelete={handleDelete} />
+
 
             {filteredRecords.length === 0 && (
               <div className="text-center py-8 text-gray-500">No records found matching your criteria.</div>
@@ -308,5 +195,117 @@ export default function Reports() {
         </Card>
       </main>
     </div>
-  )
+  );
+}
+
+function StatCard({ title, value, icon }: { title: string; value: any; icon: React.ReactNode }) {
+  return (
+    <Card>
+      <CardContent className="p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium text-gray-600">{title}</p>
+            <p className="text-2xl font-bold text-gray-900">{value}</p>
+          </div>
+          {icon}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function FilterSelect({
+  label,
+  value,
+  onChange,
+  options,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  options: string[];
+}) {
+  return (
+    <div>
+      <Label>{label}</Label>
+      <Select value={value} onValueChange={onChange}>
+        <SelectTrigger className="w-[140px]">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All</SelectItem>
+          {options.map((opt) => (
+            <SelectItem key={opt} value={opt}>
+              {opt}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+
+function Table({
+  records,
+  onDelete,
+}: {
+  records: StudentRecord[];
+  onDelete: (id: string) => void;
+}) {
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full">
+        <thead>
+          <tr className="border-b">
+            {["Student", "GPA", "Scale", "Credits", "Semester", "Date", "Status", "Actions"].map((h) => (
+              <th key={h} className="text-left py-3 px-4 font-medium text-gray-900">
+                {h}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {records.map((record) => (
+            <tr key={record.id} className="border-b hover:bg-gray-50">
+              <td className="py-3 px-4">
+                <div className="flex items-center">
+                  <div className="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                    <User className="h-4 w-4 text-blue-600" />
+                  </div>
+                  <span className="font-medium">{record.name}</span>
+                </div>
+              </td>
+              <td className="py-3 px-4 font-semibold text-lg">{record.gpa}</td>
+              <td className="py-3 px-4">{record.scale}</td>
+              <td className="py-3 px-4">{record.totalCredits}</td>
+              <td className="py-3 px-4">{record.semester}</td>
+              <td className="py-3 px-4 text-gray-600">{record.calculatedDate}</td>
+              <td className="py-3 px-4">
+                <Badge
+                  variant={
+                    record.status === "completed"
+                      ? "default"
+                      : record.status === "pending"
+                        ? "secondary"
+                        : "outline"
+                  }
+                >
+                  {record.status}
+                </Badge>
+              </td>
+              <td className="py-3 px-4">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onDelete(record.id)}
+                >
+                  <Trash className="h-4 w-4 text-red-600" />
+                </Button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
 }

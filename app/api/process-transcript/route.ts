@@ -1,115 +1,103 @@
-import { type NextRequest, NextResponse } from "next/server"
-import tesseract from "node-tesseract-ocr"
-import fs from "fs"
-import path from "path"
-import { openai } from "@ai-sdk/openai"
-import { generateText } from "ai"
+import { NextRequest, NextResponse } from "next/server";
+import { openai } from "@ai-sdk/openai";
+import { generateText } from "ai";
 
 export async function POST(request: NextRequest) {
   try {
-    const apiKey = process.env.OPENAI_API_KEY
-    if (!apiKey) {
-      return NextResponse.json({ success: false, error: "OpenAI API key missing" }, { status: 500 })
-    }
-
-    const formData = await request.formData()
-    const file = formData.get("transcript") as File
-    const selectedInstitution = formData.get("selectedInstitution") as string
+    const formData = await request.formData();
+    const file = formData.get("transcript") as File;
 
     if (!file) {
-      return NextResponse.json({ success: false, error: "No file uploaded" }, { status: 400 })
+      return NextResponse.json({ success: false, error: "No file uploaded" }, { status: 400 });
     }
 
-    const buffer = Buffer.from(await file.arrayBuffer())
-    const tempPath = path.join("/tmp", file.name)
-    fs.writeFileSync(tempPath, buffer)
+    const buffer = Buffer.from(await file.arrayBuffer());
 
-    // Perform OCR
-    const extractedText = await tesseract.recognize(tempPath, { lang: "eng" })
-    fs.unlinkSync(tempPath)
+    // ✅ OCR.Space API call
+    const ocrForm = new FormData();
+    ocrForm.append("file", new Blob([buffer], { type: file.type }), file.name);
+    ocrForm.append("language", "eng");
+    ocrForm.append("isOverlayRequired", "false");
+    ocrForm.append("OCREngine", "2");
 
-    // 🔥 Call OpenAI to parse OCR text into fallback-like structured data
+    const ocrResponse = await fetch("https://api.ocr.space/parse/image", {
+      method: "POST",
+      headers: {
+        apikey: process.env.OCR_SPACE_API_KEY || "helloworld",
+      },
+      body: ocrForm,
+    });
+
+    const ocrJson = await ocrResponse.json();
+    const extractedText = ocrJson.ParsedResults?.[0]?.ParsedText;
+
+    if (!extractedText) {
+      return NextResponse.json({ success: false, error: "OCR failed" }, { status: 500 });
+    }
+
+    // 🔥 OpenAI prompt to parse transcript into structured JSON
     const prompt = `
-You are an expert OCR post-processor for academic transcripts.
+You are an expert transcript parser.
 
-Given the extracted raw text below from a transcript PDF, parse and return structured JSON **strictly in this schema**:
+Return JSON with this format:
 
 {
-  "institutionName": "Full name of institution",
-  "institutionType": "Technical/Research/Liberal Arts/Medical/Business",
-  "country": "Country",
-  "studentName": "Student's full name",
-  "studentId": "Student ID",
-  "gradingScale": "Detected grading system (e.g. '10-point CGPA', '4.0 GPA', 'Percentage', 'Letter Grades', 'Class Honours')",
+  "institutionName": "",
+  "institutionType": "",
+  "studentName": "",
+  "studentId": "",
+  "gradingScale": "",
+  "totalCredits": 0,
+  "cgpa": 0,
+  "confidence": 95,
   "courses": [
     {
-      "id": "unique_id",
-      "code": "Course code",
-      "name": "Full course name",
-      "credits": number,
-      "grade": "Grade received",
-      "semester": "Semester/Term name",
-      "year": "Academic year"
+      "id": "course-1",
+      "courseId": "",
+      "courseName": "",
+      "credits": 0,
+      "grade": "",
+      "semester": "",
+      "year": ""
     }
-  ],
-  "totalCredits": number,
-  "cgpa": number,
-  "confidence": number (0-100)
+  ]
 }
 
-Here is the OCR extracted text:
+OCR text:
 """
 ${extractedText}
 """
 
-The institution is "${selectedInstitution}". Return only valid JSON with no explanation text.
-    `
+Return **only valid JSON**, no explanations.
+    `;
 
     const { text: aiParsed } = await generateText({
       model: openai("gpt-4o"),
       prompt,
-      system:
-        "You are an academic transcript OCR parser. Always respond with valid JSON strictly matching the schema, no extra text.",
-    })
+      system: "You are a strict JSON parser. Return only valid JSON with no extra text.",
+    });
 
-    let transcriptData
+    // ✅ Clean up response to ensure valid JSON
+    const cleanedJsonString = aiParsed
+      .replace(/```json/g, "")
+      .replace(/```/g, "")
+      .trim();
+
+    let parsedData;
     try {
-      transcriptData = JSON.parse(aiParsed)
+      parsedData = JSON.parse(cleanedJsonString);
     } catch (err) {
-      console.error("AI JSON parsing failed:", err)
-      return NextResponse.json({ success: false, error: "AI parsing failed" }, { status: 500 })
+      console.error("AI JSON parsing failed:", cleanedJsonString);
+      return NextResponse.json(
+        { success: false, error: "AI parsing failed. Invalid JSON returned.", raw: cleanedJsonString },
+        { status: 500 }
+      );
     }
 
-    // ✅ Ensure final data has fallback fields for your UI
-    const coursesWithIds = transcriptData.courses?.map((course: any, index: number) => ({
-      ...course,
-      id: course.id || (index + 1).toString(),
-      credits: Number(course.credits) || 0,
-    })) || []
-
-    const totalCredits = coursesWithIds.reduce((sum: number, c: any) => sum + c.credits, 0)
-
-    const finalData = {
-      institutionName: transcriptData.institutionName || "Unknown",
-      institutionType: transcriptData.institutionType || "Unknown",
-      country: transcriptData.country || "Unknown",
-      studentName: transcriptData.studentName || "Unknown",
-      studentId: transcriptData.studentId || "Unknown",
-      gradingScale: transcriptData.gradingScale || "Unknown",
-      courses: coursesWithIds,
-      totalCredits: transcriptData.totalCredits || totalCredits,
-      cgpa: transcriptData.cgpa || 0.0,
-      confidence: transcriptData.confidence || 90,
-      processedAt: new Date().toISOString(),
-      fileName: file.name,
-    }
-
-    return NextResponse.json({
-      success: true,
-      data: finalData,
-    })
+    // ✅ Return UI-ready mapped data
+    return NextResponse.json({ success: true, data: parsedData });
   } catch (error) {
-    console.error("OCR + AI error:", error)
-    return NextResponse.json({ success: false, error: "Processing failed" }, { status: 500 })
+    console.error("OCR + AI error:", error);
+    return NextResponse.json({ success: false, error: "Processing failed" }, { status: 500 });
   }
 }

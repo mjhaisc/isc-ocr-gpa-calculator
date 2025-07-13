@@ -1,15 +1,27 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState, useCallback } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Progress } from "@/components/ui/progress"
-import { Badge } from "@/components/ui/badge"
+import { useState, useCallback } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
 import {
   Upload,
   FileText,
@@ -22,34 +34,36 @@ import {
   Save,
   X,
   Calculator,
-} from "lucide-react"
+  Delete,
+  Download,
+} from "lucide-react";
 
 interface ExtractedCourse {
-  id: string
-  courseId: string
-  courseName: string
-  credits: number
-  grade: string
-  semester: string
-  year: string
+  id: string;
+  courseId: string;
+  courseName: string;
+  credits: number;
+  grade: string;
+  semester: string;
+  year: string;
 }
 
 interface TranscriptData {
-  institutionName: string
-  institutionType: string
-  studentName: string
-  studentId: string
-  courses: ExtractedCourse[]
-  gradingScale: string
-  totalCredits: number
-  cgpa?: number
-  confidence: number
+  institutionName: string;
+  institutionType: string;
+  studentName: string;
+  studentId: string;
+  courses: ExtractedCourse[];
+  gradingScale: string;
+  totalCredits: number;
+  cgpa?: number;
+  confidence: number;
 }
 
 interface TranscriptUploadProps {
-  onTranscriptProcessed: (data: TranscriptData) => void
-  onCoursesExtracted: (courses: any[]) => void
-  onGPACalculated: (gpa: number, details: any) => void
+  onTranscriptProcessed: (data: TranscriptData) => void;
+  onCoursesExtracted: (courses: any[]) => void;
+  onGPACalculated: (gpa: number, details: any) => void;
 }
 
 export function TranscriptUpload({
@@ -57,16 +71,22 @@ export function TranscriptUpload({
   onCoursesExtracted,
   onGPACalculated,
 }: TranscriptUploadProps) {
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null)
-  const [isProcessing, setIsProcessing] = useState(false)
-  const [processingStep, setProcessingStep] = useState("")
-  const [progress, setProgress] = useState(0)
-  const [transcriptData, setTranscriptData] = useState<TranscriptData | null>(null)
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
-  const [selectedInstitution, setSelectedInstitution] = useState("")
-  const [editingCourse, setEditingCourse] = useState<string | null>(null)
-  const [calculatedGPA, setCalculatedGPA] = useState<{ gpa: number; details: any } | null>(null)
-  const [isCalculatingGPA, setIsCalculatingGPA] = useState(false)
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [processingStep, setProcessingStep] = useState("");
+  const [progress, setProgress] = useState(0);
+  const [transcriptData, setTranscriptData] = useState<TranscriptData | null>(
+    null
+  );
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [selectedInstitution, setSelectedInstitution] = useState("");
+  const [editingCourse, setEditingCourse] = useState<string | null>(null);
+  const [calculatedGPA, setCalculatedGPA] = useState<{
+    gpa: number;
+    details: any;
+  } | null>(null);
+  const [isCalculatingGPA, setIsCalculatingGPA] = useState(false);
+  const [isDownloadingReport, setIsDownloadingReport] = useState(false);
 
   const globalInstitutions = [
     {
@@ -117,7 +137,14 @@ export function TranscriptUpload({
       type: "Technical",
       gradingScale: "10-point CGPA",
     },
-    { id: "mit", name: "MIT", country: "USA", rigor: 4.9, type: "Technical", gradingScale: "4.0 GPA" },
+    {
+      id: "mit",
+      name: "MIT",
+      country: "USA",
+      rigor: 4.9,
+      type: "Technical",
+      gradingScale: "4.0 GPA",
+    },
     {
       id: "stanford",
       name: "Stanford University",
@@ -142,110 +169,153 @@ export function TranscriptUpload({
       type: "Research",
       gradingScale: "Class Honours",
     },
-  ]
+  ];
 
-  const handleFileUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (file) {
-      setUploadedFile(file)
-      setTranscriptData(null)
-      setCalculatedGPA(null)
+  const handleFileUpload = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (file) {
+        setUploadedFile(file);
+        setTranscriptData(null);
+        setCalculatedGPA(null);
 
-      // Create preview URL for PDF/images
-      const url = URL.createObjectURL(file)
-      setPreviewUrl(url)
-    }
-  }, [])
+        // Create preview URL for PDF/images
+        const url = URL.createObjectURL(file);
+        setPreviewUrl(url);
+      }
+    },
+    []
+  );
 
   const processTranscript = async () => {
-    if (!uploadedFile) return
+    if (!uploadedFile) return;
 
-    setIsProcessing(true)
-    setProgress(0)
+    setIsProcessing(true);
+    setProgress(0);
 
     try {
       // Step 1: OCR Processing
-      setProcessingStep("Extracting text from document...")
-      setProgress(20)
-      await new Promise((resolve) => setTimeout(resolve, 1500))
+      setProcessingStep("Extracting text from document...");
+      setProgress(20);
+      await new Promise((resolve) => setTimeout(resolve, 1500));
 
       // Step 2: Institution Recognition
-      setProcessingStep("Identifying institution and grading system...")
-      setProgress(40)
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+      setProcessingStep("Identifying institution and grading system...");
+      setProgress(40);
+      await new Promise((resolve) => setTimeout(resolve, 1000));
 
       // Step 3: Course Data Extraction
-      setProcessingStep("Extracting course information...")
-      setProgress(60)
-      await new Promise((resolve) => setTimeout(resolve, 1200))
+      setProcessingStep("Extracting course information...");
+      setProgress(60);
+      await new Promise((resolve) => setTimeout(resolve, 1200));
 
       // Step 4: Grade Conversion
-      setProcessingStep("Converting grades and calculating GPA...")
-      setProgress(80)
-      await new Promise((resolve) => setTimeout(resolve, 800))
+      setProcessingStep("Converting grades and calculating GPA...");
+      setProgress(80);
+      await new Promise((resolve) => setTimeout(resolve, 800));
 
       // Step 5: Validation
-      setProcessingStep("Validating extracted data...")
-      setProgress(100)
+      setProcessingStep("Validating extracted data...");
+      setProgress(100);
 
       // Simulate API call for transcript processing
-      const formData = new FormData()
-      formData.append("transcript", uploadedFile)
-      formData.append("selectedInstitution", selectedInstitution)
+      const formData = new FormData();
+      formData.append("transcript", uploadedFile);
+      formData.append("selectedInstitution", selectedInstitution);
 
       const response = await fetch("/api/process-transcript", {
         method: "POST",
         body: formData,
-      })
+      });
 
-      const result = await response.json()
+      const result = await response.json();
 
       if (result.success) {
         // Convert courses to the expected format with proper IDs
-        const processedCourses = result.data.courses.map((course: any, index: number) => ({
-          id: course.id || `course-${index}`,
-          courseId: course.code || course.courseId || `COURSE${index + 1}`,
-          courseName: course.name || course.courseName,
-          credits: course.credits || 3,
-          grade: course.grade,
-          semester: course.semester || "Fall",
-          year: course.year || "2023",
-        }))
+        const processedCourses = result.data.courses.map(
+          (course: any, index: number) => ({
+            id: course.id || `course-${index}`,
+            courseId: course.code || course.courseId || `COURSE${index + 1}`,
+            courseName: course.name || course.courseName,
+            credits: course.credits || 3,
+            grade: course.grade,
+            semester: course.semester || "Fall",
+            year: course.year || "2023",
+          })
+        );
 
         const processedData = {
           ...result.data,
           courses: processedCourses,
-        }
+        };
 
-        setTranscriptData(processedData)
-        onTranscriptProcessed(processedData)
-        onCoursesExtracted(processedCourses)
+        setTranscriptData(processedData);
+        onTranscriptProcessed(processedData);
+        onCoursesExtracted(processedCourses);
+
+        // ✅ Save to localStorage transcriptProcess count
+        const prevCount = parseInt(
+          localStorage.getItem("transcriptProcess") || "0",
+          10
+        );
+        const newCount = prevCount + 1;
+        localStorage.setItem("transcriptProcess", newCount.toString());
+
+        // ✅ Prepare new result entry
+        const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+
+        // Get latest semester + year from courses (fallback if missing)
+        const latestCourse = processedCourses[processedCourses.length - 1];
+        const semester = latestCourse
+          ? `${latestCourse.semester} ${latestCourse.year}`
+          : "N/A";
+
+        const newEntry = {
+          Student: result.data.studentName || "Unknown",
+          GPA: result.data.cgpa || 0,
+          Scale: result.data.gradingScale || "Unknown",
+          Credits: result.data.totalCredits || 0,
+          Semester: semester,
+          Date: today,
+          Status: "Completed",
+        };
+
+        // ✅ Save to results array in localStorage
+        const existingResults = JSON.parse(
+          localStorage.getItem("results") || "[]"
+        );
+        existingResults.push(newEntry);
+        localStorage.setItem("results", JSON.stringify(existingResults));
       }
     } catch (error) {
-      console.error("Transcript processing error:", error)
+      console.error("Transcript processing error:", error);
     } finally {
-      setIsProcessing(false)
-      setProcessingStep("")
+      setIsProcessing(false);
+      setProcessingStep("");
     }
-  }
+  };
 
-  const updateCourse = (courseId: string, field: keyof ExtractedCourse, value: string | number) => {
-    if (!transcriptData) return
+  const updateCourse = (
+    courseId: string,
+    field: keyof ExtractedCourse,
+    value: string | number
+  ) => {
+    if (!transcriptData) return;
 
     const updatedCourses = transcriptData.courses.map((course) =>
-      course.id === courseId ? { ...course, [field]: value } : course,
-    )
+      course.id === courseId ? { ...course, [field]: value } : course
+    );
 
     setTranscriptData({
       ...transcriptData,
       courses: updatedCourses,
-    })
-  }
+    });
+  };
 
   const calculateGPAFromTranscript = async () => {
-    if (!transcriptData) return
+    if (!transcriptData) return;
 
-    setIsCalculatingGPA(true)
+    setIsCalculatingGPA(true);
 
     try {
       // Convert transcript data to the format expected by the GPA calculator
@@ -257,10 +327,12 @@ export function TranscriptUpload({
         semester: `${course.semester} ${course.year}`,
         isTransfer: false,
         courseType: "core",
-      }))
+      }));
 
       // Get institution details for rigor adjustment
-      const institution = globalInstitutions.find((inst) => inst.id === selectedInstitution)
+      const institution = globalInstitutions.find(
+        (inst) => inst.id === selectedInstitution
+      );
 
       const response = await fetch("/api/calculate-transcript-gpa", {
         method: "POST",
@@ -277,25 +349,81 @@ export function TranscriptUpload({
           },
           studentName: transcriptData.studentName,
         }),
-      })
+      });
 
-      const result = await response.json()
+      const result = await response.json();
 
       if (result.success) {
         setCalculatedGPA({
           gpa: result.convertedGPA,
           details: result.details,
-        })
-        onGPACalculated(result.convertedGPA, result.details)
+        });
+        onGPACalculated(result.convertedGPA, result.details);
       } else {
-        console.error("GPA calculation failed:", result.error)
+        console.error("GPA calculation failed:", result.error);
       }
     } catch (error) {
-      console.error("GPA calculation error:", error)
+      console.error("GPA calculation error:", error);
     } finally {
-      setIsCalculatingGPA(false)
+      setIsCalculatingGPA(false);
     }
-  }
+  };
+
+  const handleExportReport = async () => {
+    setIsDownloadingReport(true);
+    try {
+      const institution = globalInstitutions.find(
+        (inst) => inst.id === selectedInstitution
+      );
+      const courses = transcriptData?.courses.map((course) => ({
+        id: course.id,
+        name: course.courseName,
+        credits: course.credits,
+        grade: course.grade,
+        semester: `${course.semester} ${course.year}`,
+        isTransfer: false,
+        courseType: "core",
+      }));
+
+      const body = {
+        data: {
+          courses, // your courses array
+          institutionData: {
+            name: transcriptData?.institutionName,
+            gradingScale: transcriptData?.gradingScale,
+            rigor: institution?.rigor || 4.0,
+            originalCGPA: transcriptData?.cgpa,
+          },
+          studentName: transcriptData?.studentName,
+        },
+      };
+
+      const response = await fetch("/api/export-report", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      });
+
+      if (!response.ok) throw new Error("Export API call failed");
+
+      const fileBlob = await response.blob();
+      const url = window.URL.createObjectURL(fileBlob);
+
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "Detailed_Report.csv";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setIsDownloadingReport(false);
+      console.log("✅ Detailed report downloaded successfully");
+    } catch (error) {
+      console.error("❌ Failed to export detailed report:", error);
+      alert("Failed to export detailed report. Please try again.");
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -307,8 +435,8 @@ export function TranscriptUpload({
             Upload Transcript/Marksheet
           </CardTitle>
           <CardDescription>
-            Upload transcripts from global institutions (PDF, JPG, PNG). Supports IITs, NITs, and international
-            universities.
+            Upload transcripts from global institutions (PDF). Supports IITs,
+            NITs, and international universities.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -321,7 +449,9 @@ export function TranscriptUpload({
               onChange={handleFileUpload}
               className="cursor-pointer"
             />
-            <p className="text-sm text-gray-500">Supported formats: PDF, JPG, PNG (Max size: 10MB)</p>
+            <p className="text-sm text-gray-500">
+              Supported formats: PDF (Max size: 1MB)
+            </p>
           </div>
 
           {uploadedFile && (
@@ -329,11 +459,19 @@ export function TranscriptUpload({
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
                   <FileText className="h-4 w-4 text-blue-600" />
-                  <span className="text-sm font-medium">{uploadedFile.name}</span>
-                  <Badge variant="secondary">{(uploadedFile.size / 1024 / 1024).toFixed(1)} MB</Badge>
+                  <span className="text-sm font-medium">
+                    {uploadedFile.name}
+                  </span>
+                  <Badge variant="secondary">
+                    {(uploadedFile.size / 1024 / 1024).toFixed(1)} MB
+                  </Badge>
                 </div>
                 {previewUrl && (
-                  <Button variant="ghost" size="sm" onClick={() => window.open(previewUrl, "_blank")}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => window.open(previewUrl, "_blank")}
+                  >
                     <Eye className="h-4 w-4 mr-1" />
                     Preview
                   </Button>
@@ -342,7 +480,7 @@ export function TranscriptUpload({
             </div>
           )}
 
-          <div className="space-y-2">
+          {/* <div className="space-y-2">
             <Label htmlFor="institution-select">Institution (Optional - helps with accuracy)</Label>
             <Select value={selectedInstitution} onValueChange={setSelectedInstitution}>
               <SelectTrigger>
@@ -362,9 +500,13 @@ export function TranscriptUpload({
                 ))}
               </SelectContent>
             </Select>
-          </div>
+          </div> */}
 
-          <Button onClick={processTranscript} disabled={!uploadedFile || isProcessing} className="w-full">
+          <Button
+            onClick={processTranscript}
+            disabled={!uploadedFile || isProcessing}
+            className="w-full"
+          >
             {isProcessing ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -405,7 +547,11 @@ export function TranscriptUpload({
               {previewUrl && (
                 <div className="border rounded-lg overflow-hidden">
                   {uploadedFile?.type === "application/pdf" ? (
-                    <iframe src={previewUrl} className="w-full h-96" title="Transcript Preview" />
+                    <iframe
+                      src={previewUrl}
+                      className="w-full h-96"
+                      title="Transcript Preview"
+                    />
                   ) : (
                     <img
                       src={previewUrl || "/placeholder.svg"}
@@ -445,14 +591,25 @@ export function TranscriptUpload({
                   <p className="text-sm">{transcriptData.gradingScale}</p>
                 </div>
                 <div>
-                  <Label className="text-sm font-medium">Original CGPA/GPA</Label>
-                  <p className="text-sm font-semibold">{transcriptData.cgpa || "N/A"}</p>
+                  <Label className="text-sm font-medium">
+                    Original CGPA/GPA
+                  </Label>
+                  <p className="text-sm font-semibold">
+                    {transcriptData.cgpa || "N/A"}
+                  </p>
                 </div>
                 <div>
-                  <Label className="text-sm font-medium">Extraction Confidence</Label>
+                  <Label className="text-sm font-medium">
+                    Extraction Confidence
+                  </Label>
                   <div className="flex items-center space-x-2">
-                    <Progress value={transcriptData.confidence} className="w-20 h-2" />
-                    <span className="text-sm">{transcriptData.confidence}%</span>
+                    <Progress
+                      value={transcriptData.confidence}
+                      className="w-20 h-2"
+                    />
+                    <span className="text-sm">
+                      {transcriptData.confidence}%
+                    </span>
                   </div>
                 </div>
               </div>
@@ -467,7 +624,8 @@ export function TranscriptUpload({
           <CardHeader>
             <CardTitle>Extracted Course Data</CardTitle>
             <CardDescription>
-              Review and edit the extracted course information. Click on any cell to edit.
+              Review and edit the extracted course information. Click on any
+              cell to edit.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -475,33 +633,62 @@ export function TranscriptUpload({
               <table className="w-full border-collapse border border-gray-300">
                 <thead>
                   <tr className="bg-gray-50">
-                    <th className="border border-gray-300 p-3 text-left font-medium">Course ID</th>
-                    <th className="border border-gray-300 p-3 text-left font-medium">Course Name</th>
-                    <th className="border border-gray-300 p-3 text-left font-medium">Credits</th>
-                    <th className="border border-gray-300 p-3 text-left font-medium">Grade</th>
-                    <th className="border border-gray-300 p-3 text-left font-medium">Semester</th>
-                    <th className="border border-gray-300 p-3 text-left font-medium">Actions</th>
+                    <th className="border border-gray-300 p-3 text-left font-medium">
+                      Course ID
+                    </th>
+                    <th className="border border-gray-300 p-3 text-left font-medium">
+                      Course Name
+                    </th>
+                    <th className="border border-gray-300 p-3 text-left font-medium">
+                      Credits
+                    </th>
+                    <th className="border border-gray-300 p-3 text-left font-medium">
+                      Grade
+                    </th>
+                    <th className="border border-gray-300 p-3 text-left font-medium">
+                      Semester
+                    </th>
+                    <th className="border border-gray-300 p-3 text-left font-medium">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {transcriptData.courses.map((course, index) => (
-                    <tr key={course.id} className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}>
+                    <tr
+                      key={course.id}
+                      className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}
+                    >
                       <td className="border border-gray-300 p-3">
                         {editingCourse === course.id ? (
                           <Input
                             value={course.courseId}
-                            onChange={(e) => updateCourse(course.id, "courseId", e.target.value)}
+                            onChange={(e) =>
+                              updateCourse(
+                                course.id,
+                                "courseId",
+                                e.target.value
+                              )
+                            }
                             className="w-full"
                           />
                         ) : (
-                          <span className="font-mono text-sm">{course.courseId}</span>
+                          <span className="font-mono text-sm">
+                            {course.courseId}
+                          </span>
                         )}
                       </td>
                       <td className="border border-gray-300 p-3">
                         {editingCourse === course.id ? (
                           <Input
                             value={course.courseName}
-                            onChange={(e) => updateCourse(course.id, "courseName", e.target.value)}
+                            onChange={(e) =>
+                              updateCourse(
+                                course.id,
+                                "courseName",
+                                e.target.value
+                              )
+                            }
                             className="w-full"
                           />
                         ) : (
@@ -513,18 +700,28 @@ export function TranscriptUpload({
                           <Input
                             type="number"
                             value={course.credits}
-                            onChange={(e) => updateCourse(course.id, "credits", Number.parseInt(e.target.value) || 0)}
+                            onChange={(e) =>
+                              updateCourse(
+                                course.id,
+                                "credits",
+                                Number.parseInt(e.target.value) || 0
+                              )
+                            }
                             className="w-20"
                           />
                         ) : (
-                          <span className="font-semibold">{course.credits}</span>
+                          <span className="font-semibold">
+                            {course.credits}
+                          </span>
                         )}
                       </td>
                       <td className="border border-gray-300 p-3">
                         {editingCourse === course.id ? (
                           <Input
                             value={course.grade}
-                            onChange={(e) => updateCourse(course.id, "grade", e.target.value)}
+                            onChange={(e) =>
+                              updateCourse(course.id, "grade", e.target.value)
+                            }
                             className="w-16"
                           />
                         ) : (
@@ -538,9 +735,14 @@ export function TranscriptUpload({
                           <Input
                             value={`${course.semester} ${course.year}`}
                             onChange={(e) => {
-                              const [semester, year] = e.target.value.split(" ")
-                              updateCourse(course.id, "semester", semester || "")
-                              updateCourse(course.id, "year", year || "")
+                              const [semester, year] =
+                                e.target.value.split(" ");
+                              updateCourse(
+                                course.id,
+                                "semester",
+                                semester || ""
+                              );
+                              updateCourse(course.id, "year", year || "");
                             }}
                             className="w-full"
                           />
@@ -553,15 +755,27 @@ export function TranscriptUpload({
                       <td className="border border-gray-300 p-3">
                         {editingCourse === course.id ? (
                           <div className="flex space-x-1">
-                            <Button size="sm" variant="ghost" onClick={() => setEditingCourse(null)}>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => setEditingCourse(null)}
+                            >
                               <Save className="h-3 w-3" />
                             </Button>
-                            <Button size="sm" variant="ghost" onClick={() => setEditingCourse(null)}>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => setEditingCourse(null)}
+                            >
                               <X className="h-3 w-3" />
                             </Button>
                           </div>
                         ) : (
-                          <Button size="sm" variant="ghost" onClick={() => setEditingCourse(course.id)}>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setEditingCourse(course.id)}
+                          >
                             <Edit3 className="h-3 w-3" />
                           </Button>
                         )}
@@ -575,28 +789,54 @@ export function TranscriptUpload({
             <div className="mt-4 p-4 bg-blue-50 rounded-lg">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium">Total Courses: {transcriptData.courses.length}</p>
+                  <p className="font-medium">
+                    Total Courses: {transcriptData.courses.length}
+                  </p>
                   <p className="text-sm text-gray-600">
-                    Total Credits: {transcriptData.courses.reduce((sum, course) => sum + course.credits, 0)}
+                    Total Credits:{" "}
+                    {transcriptData.courses.reduce(
+                      (sum, course) => sum + course.credits,
+                      0
+                    )}
                   </p>
                 </div>
-                <Button
-                  onClick={calculateGPAFromTranscript}
-                  disabled={isCalculatingGPA}
-                  className="bg-blue-600 hover:bg-blue-700"
-                >
-                  {isCalculatingGPA ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Calculating...
-                    </>
-                  ) : (
-                    <>
-                      <Calculator className="mr-2 h-4 w-4" />
-                      Calculate GPA
-                    </>
-                  )}
-                </Button>
+                <div className="flex space-x-2">
+                  <Button
+                    onClick={calculateGPAFromTranscript}
+                    disabled={isCalculatingGPA}
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    {isCalculatingGPA ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Calculating...
+                      </>
+                    ) : (
+                      <>
+                        <Calculator className="mr-2 h-4 w-4" />
+                        Calculate GPA
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleExportReport}
+                    disabled={isDownloadingReport}
+                  >
+                    {isDownloadingReport ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Downloading...
+                      </>
+                    ) : (
+                      <>
+                        <Download className="mr-2 h-4 w-4" />
+                        Export Detailed Report
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
             </div>
           </CardContent>
@@ -615,15 +855,21 @@ export function TranscriptUpload({
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="text-center p-6 bg-white rounded-lg shadow-sm">
-                <div className="text-4xl font-bold text-green-600 mb-2">{calculatedGPA.gpa.toFixed(2)}</div>
+                <div className="text-4xl font-bold text-green-600 mb-2">
+                  {calculatedGPA.gpa.toFixed(2)}
+                </div>
                 <div className="text-sm text-gray-600">Converted GPA</div>
                 <div className="text-xs text-gray-500">4.0 Scale</div>
               </div>
 
               <div className="text-center p-6 bg-white rounded-lg shadow-sm">
-                <div className="text-4xl font-bold text-blue-600 mb-2">{transcriptData?.cgpa?.toFixed(2) || "N/A"}</div>
+                <div className="text-4xl font-bold text-blue-600 mb-2">
+                  {transcriptData?.cgpa?.toFixed(2) || "N/A"}
+                </div>
                 <div className="text-sm text-gray-600">Original GPA</div>
-                <div className="text-xs text-gray-500">{transcriptData?.gradingScale}</div>
+                <div className="text-xs text-gray-500">
+                  {transcriptData?.gradingScale}
+                </div>
               </div>
 
               <div className="text-center p-6 bg-white rounded-lg shadow-sm">
@@ -631,14 +877,18 @@ export function TranscriptUpload({
                   {calculatedGPA.details?.rigorAdjustedGPA?.toFixed(2) || "N/A"}
                 </div>
                 <div className="text-sm text-gray-600">Rigor Adjusted</div>
-                <div className="text-xs text-gray-500">Quality Factor Applied</div>
+                <div className="text-xs text-gray-500">
+                  Quality Factor Applied
+                </div>
               </div>
             </div>
 
             {calculatedGPA.details?.conversionNotes && (
               <div className="mt-4 p-4 bg-white rounded-lg">
                 <h4 className="font-medium mb-2">Conversion Notes:</h4>
-                <p className="text-sm text-gray-700">{calculatedGPA.details.conversionNotes}</p>
+                <p className="text-sm text-gray-700">
+                  {calculatedGPA.details.conversionNotes}
+                </p>
               </div>
             )}
           </CardContent>
@@ -651,15 +901,17 @@ export function TranscriptUpload({
           <div className="flex items-start space-x-2">
             <AlertTriangle className="h-4 w-4 text-yellow-600 mt-0.5" />
             <div>
-              <p className="text-sm font-medium text-yellow-800">Review Recommended</p>
+              <p className="text-sm font-medium text-yellow-800">
+                Review Recommended
+              </p>
               <p className="text-sm text-yellow-700">
-                Confidence level is {transcriptData.confidence}%. Please verify the extracted data before proceeding
-                with GPA calculation.
+                Confidence level is {transcriptData.confidence}%. Please verify
+                the extracted data before proceeding with GPA calculation.
               </p>
             </div>
           </div>
         </div>
       )}
     </div>
-  )
+  );
 }
