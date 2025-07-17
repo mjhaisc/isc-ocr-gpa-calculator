@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Download, Search, FileText, User, GraduationCap, TrendingUp, BarChart3, Trash } from "lucide-react";
+import { Search, User, GraduationCap, TrendingUp, BarChart3, Trash } from "lucide-react";
 import { Navigation } from "@/components/navigation";
 
 interface StudentRecord {
@@ -26,14 +26,19 @@ export default function Reports() {
   const [filterScale, setFilterScale] = useState("all");
   const [filterSemester, setFilterSemester] = useState("all");
   const [studentRecords, setStudentRecords] = useState<StudentRecord[]>([]);
+  const [totalStudents, setTotalStudents] = useState(0);
 
   useEffect(() => {
     const loadData = () => {
-      const batchUploads = parseInt(localStorage?.getItem("batchUploads") || "0", 10);
-      const transcriptProcess = parseInt(localStorage?.getItem("transcriptProcess") || "0", 10);
-      const transferGPA = parseInt(localStorage?.getItem("transferGPA") || "0", 10);
+      if (typeof window === "undefined") return;
 
-      const resultsString = localStorage?.getItem("results");
+      const batchUploads = parseInt(localStorage.getItem("batchUploads") || "0", 10);
+      const transcriptProcess = parseInt(localStorage.getItem("transcriptProcess") || "0", 10);
+      const transferGPA = parseInt(localStorage.getItem("transferGPA") || "0", 10);
+
+      setTotalStudents(batchUploads + transcriptProcess + transferGPA);
+
+      const resultsString = localStorage.getItem("results");
       let resultsArray = resultsString ? JSON.parse(resultsString) : [];
 
       // Add unique IDs if missing
@@ -45,7 +50,7 @@ export default function Reports() {
       });
 
       // Save back to localStorage with IDs assigned
-      localStorage?.setItem("results", JSON.stringify(resultsArray));
+      localStorage.setItem("results", JSON.stringify(resultsArray));
 
       // Map to StudentRecord[]
       const mapped: StudentRecord[] = resultsArray.map((r: any) => ({
@@ -60,13 +65,10 @@ export default function Reports() {
       }));
 
       setStudentRecords(mapped);
-
-      localStorage?.setItem("totalStudents", (batchUploads + transcriptProcess + transferGPA).toString());
     };
 
     loadData();
   }, []);
-
 
   const filteredRecords = studentRecords.filter((record) => {
     const matchesSearch = record.name.toLowerCase().includes(searchTerm.toLowerCase());
@@ -75,41 +77,31 @@ export default function Reports() {
     return matchesSearch && matchesScale && matchesSemester;
   });
 
-  const totalStudents =
-    parseInt(localStorage?.getItem("batchUploads") || "0", 10) +
-    parseInt(localStorage?.getItem("transcriptProcess") || "0", 10) +
-    parseInt(localStorage?.getItem("transferGPA") || "0", 10);
-
   const completedCalculations = studentRecords.filter((r) => r.status === "completed").length;
   const pendingReview = studentRecords.filter((r) => r.status === "pending").length;
 
   const averageGPA =
     studentRecords.length > 0
       ? Math.round(
-        (studentRecords.reduce((sum, record) => sum + record.gpa, 0) / studentRecords.length) * 100
-      ) / 100
+          (studentRecords.reduce((sum, record) => sum + record.gpa, 0) / studentRecords.length) * 100
+        ) / 100
       : 0;
 
-  const exportReport = (format: "csv" | "pdf" | "excel") => {
-    console.log(`Exporting ${filteredRecords.length} records as ${format.toUpperCase()}`);
-    alert(`Exporting ${filteredRecords.length} records as ${format.toUpperCase()}`);
-  };
-
-
   const handleDelete = (id: string) => {
-    const resultsString = localStorage?.getItem("results");
+    if (typeof window === "undefined") return;
+
+    const resultsString = localStorage.getItem("results");
     let resultsArray = resultsString ? JSON.parse(resultsString) : [];
 
     // Filter out deleted record by id
     resultsArray = resultsArray.filter((r: any) => r.id !== id);
 
     // Save updated array back to localStorage
-    localStorage?.setItem("results", JSON.stringify(resultsArray));
+    localStorage.setItem("results", JSON.stringify(resultsArray));
 
     // Update state to re-render table
     setStudentRecords((prev) => prev.filter((record) => record.id !== id));
   };
-
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -125,16 +117,8 @@ export default function Reports() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <StatCard title="Total Students" value={totalStudents} icon={<User className="h-8 w-8 text-blue-600" />} />
           <StatCard title="Average GPA" value={averageGPA} icon={<GraduationCap className="h-8 w-8 text-green-600" />} />
-          <StatCard
-            title="Completed"
-            value={completedCalculations}
-            icon={<TrendingUp className="h-8 w-8 text-purple-600" />}
-          />
-          <StatCard
-            title="Pending Review"
-            value={pendingReview}
-            icon={<BarChart3 className="h-8 w-8 text-orange-600" />}
-          />
+          <StatCard title="Completed" value={completedCalculations} icon={<TrendingUp className="h-8 w-8 text-purple-600" />} />
+          <StatCard title="Pending Review" value={pendingReview} icon={<BarChart3 className="h-8 w-8 text-orange-600" />} />
         </div>
 
         <Card>
@@ -144,14 +128,6 @@ export default function Reports() {
                 <CardTitle>Student GPA Records</CardTitle>
                 <CardDescription>Manage and export student GPA calculations</CardDescription>
               </div>
-              {/* <div className="flex gap-2">
-                {["csv", "excel", "pdf"].map((f) => (
-                  <Button key={f} onClick={() => exportReport(f as any)} variant="outline" size="sm">
-                    <Download className="mr-2 h-4 w-4" />
-                    {f.toUpperCase()}
-                  </Button>
-                ))}
-              </div> */}
             </div>
           </CardHeader>
           <CardContent>
@@ -172,17 +148,11 @@ export default function Reports() {
               </div>
 
               <FilterSelect label="Grading Scale" value={filterScale} onChange={setFilterScale} options={["4.0", "5.0"]} />
-              <FilterSelect
-                label="Semester"
-                value={filterSemester}
-                onChange={setFilterSemester}
-                options={["Fall 2024", "Spring 2024"]}
-              />
+              <FilterSelect label="Semester" value={filterSemester} onChange={setFilterSemester} options={["Fall 2024", "Spring 2024"]} />
             </div>
 
             {/* Records Table */}
             <Table records={filteredRecords} onDelete={handleDelete} />
-
 
             {filteredRecords.length === 0 && (
               <div className="text-center py-8 text-gray-500">No records found matching your criteria.</div>
@@ -294,11 +264,7 @@ function Table({
                 </Badge>
               </td>
               <td className="py-3 px-4">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onDelete(record.id)}
-                >
+                <Button variant="ghost" size="sm" onClick={() => onDelete(record.id)}>
                   <Trash className="h-4 w-4 text-red-600" />
                 </Button>
               </td>
