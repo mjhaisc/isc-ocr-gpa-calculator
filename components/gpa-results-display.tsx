@@ -61,7 +61,7 @@ export function GPAResultsDisplay({
         },
       };
 
-      const response = await fetch("/api/export-report/route.ts", {
+      const response = await fetch("/api/export-report", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
