@@ -8,7 +8,10 @@ export async function POST(request: NextRequest) {
     const file = formData.get("transcript") as File;
 
     if (!file) {
-      return NextResponse.json({ success: false, error: "No file uploaded" }, { status: 400 });
+      return NextResponse.json(
+        { success: false, error: "No file uploaded" },
+        { status: 400 }
+      );
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
@@ -19,6 +22,7 @@ export async function POST(request: NextRequest) {
     ocrForm.append("language", "eng");
     ocrForm.append("isOverlayRequired", "false");
     ocrForm.append("OCREngine", "2");
+    ocrForm.append("isMultiplePage", "true");
 
     const ocrResponse = await fetch("https://api.ocr.space/parse/image", {
       method: "POST",
@@ -29,10 +33,15 @@ export async function POST(request: NextRequest) {
     });
 
     const ocrJson = await ocrResponse.json();
-    const extractedText = ocrJson.ParsedResults?.[0]?.ParsedText;
+    const extractedText = ocrJson.ParsedResults?.map(
+      (r: any) => r.ParsedText
+    ).join("\n\n");
 
     if (!extractedText) {
-      return NextResponse.json({ success: false, error: "OCR failed" }, { status: 500 });
+      return NextResponse.json(
+        { success: false, error: "OCR failed" },
+        { status: 500 }
+      );
     }
 
     // 🔥 OpenAI prompt to parse transcript into structured JSON
@@ -74,7 +83,8 @@ Return **only valid JSON**, no explanations.
     const { text: aiParsed } = await generateText({
       model: openai("gpt-4o"),
       prompt,
-      system: "You are a strict JSON parser. Return only valid JSON with no extra text.",
+      system:
+        "You are a strict JSON parser. Return only valid JSON with no extra text.",
     });
 
     // ✅ Clean up response to ensure valid JSON
@@ -89,7 +99,11 @@ Return **only valid JSON**, no explanations.
     } catch (err) {
       console.error("AI JSON parsing failed:", cleanedJsonString);
       return NextResponse.json(
-        { success: false, error: "AI parsing failed. Invalid JSON returned.", raw: cleanedJsonString },
+        {
+          success: false,
+          error: "AI parsing failed. Invalid JSON returned.",
+          raw: cleanedJsonString,
+        },
         { status: 500 }
       );
     }
@@ -98,6 +112,9 @@ Return **only valid JSON**, no explanations.
     return NextResponse.json({ success: true, data: parsedData });
   } catch (error) {
     console.error("OCR + AI error:", error);
-    return NextResponse.json({ success: false, error: "Processing failed" }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: "Processing failed" },
+      { status: 500 }
+    );
   }
 }
