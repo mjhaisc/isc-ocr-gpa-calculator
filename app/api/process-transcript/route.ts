@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
     ocrForm.append("language", "eng");
     ocrForm.append("isOverlayRequired", "false");
     ocrForm.append("OCREngine", "2");
-    ocrForm.append("isMultiplePage", "true");
+    // ocrForm.append("isMultiplePage", "true");
 
     const ocrResponse = await fetch("https://api.ocr.space/parse/image", {
       method: "POST",
@@ -33,9 +33,9 @@ export async function POST(request: NextRequest) {
     });
 
     const ocrJson = await ocrResponse.json();
-    const extractedText = ocrJson.ParsedResults?.map(
-      (r: any) => r.ParsedText
-    ).join("\n\n");
+    const extractedText = ocrJson.ParsedResults
+      ? ocrJson.ParsedResults.map((r: any) => r.ParsedText).join("\n")
+      : "";
 
     if (!extractedText) {
       return NextResponse.json(
