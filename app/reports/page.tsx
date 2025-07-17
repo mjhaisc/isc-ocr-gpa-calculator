@@ -29,11 +29,11 @@ export default function Reports() {
 
   useEffect(() => {
     const loadData = () => {
-      const batchUploads = parseInt(localStorage.getItem("batchUploads") || "0", 10);
-      const transcriptProcess = parseInt(localStorage.getItem("transcriptProcess") || "0", 10);
-      const transferGPA = parseInt(localStorage.getItem("transferGPA") || "0", 10);
+      const batchUploads = parseInt(localStorage?.getItem("batchUploads") || "0", 10);
+      const transcriptProcess = parseInt(localStorage?.getItem("transcriptProcess") || "0", 10);
+      const transferGPA = parseInt(localStorage?.getItem("transferGPA") || "0", 10);
 
-      const resultsString = localStorage.getItem("results");
+      const resultsString = localStorage?.getItem("results");
       let resultsArray = resultsString ? JSON.parse(resultsString) : [];
 
       // Add unique IDs if missing
@@ -45,7 +45,7 @@ export default function Reports() {
       });
 
       // Save back to localStorage with IDs assigned
-      localStorage.setItem("results", JSON.stringify(resultsArray));
+      localStorage?.setItem("results", JSON.stringify(resultsArray));
 
       // Map to StudentRecord[]
       const mapped: StudentRecord[] = resultsArray.map((r: any) => ({
@@ -61,7 +61,7 @@ export default function Reports() {
 
       setStudentRecords(mapped);
 
-      localStorage.setItem("totalStudents", (batchUploads + transcriptProcess + transferGPA).toString());
+      localStorage?.setItem("totalStudents", (batchUploads + transcriptProcess + transferGPA).toString());
     };
 
     loadData();
@@ -76,9 +76,9 @@ export default function Reports() {
   });
 
   const totalStudents =
-    parseInt(localStorage.getItem("batchUploads") || "0", 10) +
-    parseInt(localStorage.getItem("transcriptProcess") || "0", 10) +
-    parseInt(localStorage.getItem("transferGPA") || "0", 10);
+    parseInt(localStorage?.getItem("batchUploads") || "0", 10) +
+    parseInt(localStorage?.getItem("transcriptProcess") || "0", 10) +
+    parseInt(localStorage?.getItem("transferGPA") || "0", 10);
 
   const completedCalculations = studentRecords.filter((r) => r.status === "completed").length;
   const pendingReview = studentRecords.filter((r) => r.status === "pending").length;
@@ -97,14 +97,14 @@ export default function Reports() {
 
 
   const handleDelete = (id: string) => {
-    const resultsString = localStorage.getItem("results");
+    const resultsString = localStorage?.getItem("results");
     let resultsArray = resultsString ? JSON.parse(resultsString) : [];
 
     // Filter out deleted record by id
     resultsArray = resultsArray.filter((r: any) => r.id !== id);
 
     // Save updated array back to localStorage
-    localStorage.setItem("results", JSON.stringify(resultsArray));
+    localStorage?.setItem("results", JSON.stringify(resultsArray));
 
     // Update state to re-render table
     setStudentRecords((prev) => prev.filter((record) => record.id !== id));
